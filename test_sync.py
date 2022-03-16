@@ -2,7 +2,7 @@ import tempfile
 from pathlib import Path
 import shutil
 from sync import sync, determine_actions, read_paths_and_hashes
-from filesystem import FileSystem as Fs
+from filesystem import FileSystem, FakeFileSystem
 
 
 class TestE2E:
@@ -20,7 +20,7 @@ class TestE2E:
             source_path.write_text(content)
             old_dest_path.write_text(content)
 
-            sync(read_paths_and_hashes, Fs(), source, dest)
+            sync(read_paths_and_hashes, FileSystem(), source, dest)
 
             assert old_dest_path.exists() is False
             assert expected_dest_path.read_text() == content
@@ -38,7 +38,7 @@ def test_when_a_file_exists_in_the_source_but_not_the_destination():
         content = "I am a very useful file"
         (Path(source) / "my-file").write_text(content)
 
-        fs = Fs()
+        fs = FileSystem()
 
         sync(read_paths_and_hashes, fs, source, dest)
         print("_"*100)
@@ -51,6 +51,26 @@ def test_when_a_file_exists_in_the_source_but_not_the_destination():
     finally:
         shutil.rmtree(source)
         shutil.rmtree(dest)
+
+def test_when_a_file_exists_in_the_source_but_not_the_destination_fake():
+    try:
+        source = {'hash1': 'myfile.txt'}
+        dest =  {'hash2': 'myfile.txt'}
+
+        reader = {"/source": source, "/target": dest}
+
+        fs = FakeFileSystem()
+
+        sync(reader.get, fs, '/source', '/target')
+
+
+
+        assert fs == [('COPY',Path('/source/myfile.txt'),Path('/target/myfile.txt')),
+                      ('DELETE',Path('/target/myfile.txt'))]
+
+    finally:
+        pass
+
 
 
 def test_when_a_file_exists_in_the_source_but_not_the_destination():

@@ -56,4 +56,4 @@ def determine_actions(source_hashes, dest_hashes, source_folder, dest_folder):
 
     for sha, filename in dest_hashes.items():
         if sha not in source_hashes:
-            yield "DELETE", dest_folder / filename
+            yield "DELETE", Path(dest_folder) / filename
