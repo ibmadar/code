@@ -8,7 +8,7 @@ from db_tables import metadata
 
 @pytest.fixture
 def in_memory_db():
-    engine = create_engine("sqlite:///:memory:")
+    engine = create_engine("sqlite:///:memory:",echo=False)
     metadata.create_all(engine)
     return engine
 
