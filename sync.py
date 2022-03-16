@@ -1,13 +1,12 @@
 import hashlib
 import os
-import shutil
 from pathlib import Path
 
 
-def sync(source, dest):
+def sync(reader, filesystem, source, dest):
     # imperative shell step 1, gather inputs
-    source_hashes = read_paths_and_hashes(source)
-    dest_hashes = read_paths_and_hashes(dest)
+    source_hashes = reader(source)
+    dest_hashes = reader(dest)
 
     # step 2: call functional core
     actions = determine_actions(source_hashes, dest_hashes, source, dest)
@@ -15,11 +14,11 @@ def sync(source, dest):
     # imperative shell step 3, apply outputs
     for action, *paths in actions:
         if action == "COPY":
-            shutil.copyfile(*paths)
+            filesystem.copy(*paths)
         if action == "MOVE":
-            shutil.move(*paths)
+            filesystem.move(*paths)
         if action == "DELETE":
-            os.remove(paths[0])
+            filesystem.delete(*paths)
 
 
 BLOCKSIZE = 65536

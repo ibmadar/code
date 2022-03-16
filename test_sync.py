@@ -1,28 +1,11 @@
 import tempfile
 from pathlib import Path
 import shutil
-from sync import sync, determine_actions
+from sync import sync, determine_actions, read_paths_and_hashes
+from filesystem import FileSystem as Fs
 
 
 class TestE2E:
-    @staticmethod
-    def test_when_a_file_exists_in_the_source_but_not_the_destination():
-        try:
-            source = tempfile.mkdtemp()
-            dest = tempfile.mkdtemp()
-
-            content = "I am a very useful file"
-            (Path(source) / "my-file").write_text(content)
-
-            sync(source, dest)
-
-            expected_path = Path(dest) / "my-file"
-            assert expected_path.exists()
-            assert expected_path.read_text() == content
-
-        finally:
-            shutil.rmtree(source)
-            shutil.rmtree(dest)
 
     @staticmethod
     def test_when_a_file_has_been_renamed_in_the_source():
@@ -37,7 +20,7 @@ class TestE2E:
             source_path.write_text(content)
             old_dest_path.write_text(content)
 
-            sync(source, dest)
+            sync(read_paths_and_hashes, Fs(), source, dest)
 
             assert old_dest_path.exists() is False
             assert expected_dest_path.read_text() == content
@@ -45,6 +28,29 @@ class TestE2E:
         finally:
             shutil.rmtree(source)
             shutil.rmtree(dest)
+
+
+def test_when_a_file_exists_in_the_source_but_not_the_destination():
+    try:
+        source = tempfile.mkdtemp()
+        dest = tempfile.mkdtemp()
+
+        content = "I am a very useful file"
+        (Path(source) / "my-file").write_text(content)
+
+        fs = Fs()
+
+        sync(read_paths_and_hashes, fs, source, dest)
+        print("_"*100)
+        print(fs)
+
+        expected_path = Path(dest) / "my-file"
+        assert expected_path.exists()
+        assert expected_path.read_text() == content
+
+    finally:
+        shutil.rmtree(source)
+        shutil.rmtree(dest)
 
 
 def test_when_a_file_exists_in_the_source_but_not_the_destination():
