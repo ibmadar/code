@@ -5,7 +5,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session
 
-
 from allocation import config
 from allocation.adapters import repository
 from . import messagebus
@@ -20,23 +19,40 @@ class AbstractUnitOfWork(abc.ABC):
     def __exit__(self, *args):
         self.rollback()
 
-    def commit(self):
-        self._commit()
-        self.publish_events()
-
-    def publish_events(self):
-        for product in self.products.seen:
-            while product.events:
-                event = product.events.pop(0)
-                messagebus.handle(event)
-
     @abc.abstractmethod
-    def _commit(self):
+    def commit(self):
         raise NotImplementedError
 
     @abc.abstractmethod
     def rollback(self):
         raise NotImplementedError
+
+
+class PublisherUOW:
+    def __init__(self, uow: AbstractUnitOfWork):
+        self._uow = uow
+
+    def _publish_events(self):
+        for product in self._uow.products.seen:
+            while product.events:
+                event = product.events.pop(0)
+                messagebus.handle(event)
+
+    def commit(self):
+        self._uow.commit()
+        self._publish_events()
+
+    def rollback(self):
+        self._uow.rollback()
+
+    def __enter__(self) -> AbstractUnitOfWork:
+        return self._uow.__enter__()
+
+    def __exit__(self, *args):
+        self._uow.__exit__(*args)
+
+    def __getattr__(self, item):
+        return getattr(self._uow,item)
 
 
 DEFAULT_SESSION_FACTORY = sessionmaker(
@@ -62,7 +78,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
         super().__exit__(*args)
         self.session.close()
 
-    def _commit(self):
+    def commit(self):
         self.session.commit()
 
     def rollback(self):
